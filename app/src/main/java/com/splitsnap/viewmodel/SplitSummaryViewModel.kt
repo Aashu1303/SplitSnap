@@ -1,16 +1,17 @@
 package com.splitsnap.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.splitsnap.data.repository.SplitSnapRepository
 import com.splitsnap.domain.model.PersonSplit
 import com.splitsnap.domain.model.Receipt
 import com.splitsnap.domain.model.ReceiptStatus
+import com.splitsnap.domain.repository.SplitSnapRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class SplitSummaryUiState(
     val receipt: Receipt? = null,
@@ -19,13 +20,21 @@ data class SplitSummaryUiState(
     val isLoading: Boolean = true
 )
 
-class SplitSummaryViewModel(
-    private val receiptId: String,
-    private val repository: SplitSnapRepository
-) : ViewModel() {
+interface SplitSummaryViewModel {
+    val state: StateFlow<SplitSummaryUiState>
+    fun togglePersonExpanded(personId: String)
+    fun markAsCompleted()
+}
 
-    private val _uiState = MutableStateFlow(SplitSummaryUiState())
-    val uiState: StateFlow<SplitSummaryUiState> = _uiState.asStateFlow()
+@HiltViewModel
+class SplitSummaryViewModelImpl @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: SplitSnapRepository
+) : ViewModel(), SplitSummaryViewModel {
+
+    private val receiptId: String = checkNotNull(savedStateHandle["receiptId"])
+
+    override val state = MutableStateFlow(SplitSummaryUiState())
 
     init {
         loadData()
@@ -35,8 +44,8 @@ class SplitSummaryViewModel(
         viewModelScope.launch {
             val receipt = repository.getReceiptById(receiptId)
             val splits = repository.calculateSplits(receiptId)
-            
-            _uiState.value = _uiState.value.copy(
+
+            state.value = state.value.copy(
                 receipt = receipt,
                 splits = splits.filter { it.total > 0 },
                 isLoading = false
@@ -44,32 +53,19 @@ class SplitSummaryViewModel(
         }
     }
 
-    fun togglePersonExpanded(personId: String) {
-        val currentExpanded = _uiState.value.expandedPersonId
-        _uiState.value = _uiState.value.copy(
+    override fun togglePersonExpanded(personId: String) {
+        val currentExpanded = state.value.expandedPersonId
+        state.value = state.value.copy(
             expandedPersonId = if (currentExpanded == personId) null else personId
         )
     }
 
-    fun markAsCompleted() {
+    override fun markAsCompleted() {
         viewModelScope.launch {
-            val receipt = _uiState.value.receipt ?: return@launch
+            val receipt = state.value.receipt ?: return@launch
             val updatedReceipt = receipt.copy(status = ReceiptStatus.COMPLETED)
             repository.updateReceipt(updatedReceipt)
-            _uiState.value = _uiState.value.copy(receipt = updatedReceipt)
-        }
-    }
-
-    class Factory(
-        private val receiptId: String,
-        private val repository: SplitSnapRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(SplitSummaryViewModel::class.java)) {
-                return SplitSummaryViewModel(receiptId, repository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+            state.value = state.value.copy(receipt = updatedReceipt)
         }
     }
 }

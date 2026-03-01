@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1dp"
+    android:height="1dp"
+    android:alpha="0.0"
+    android:viewportWidth="1"
+    android:viewportHeight="1">
+    <!-- Completely transparent/invisible icon to hide default Android logo on all versions -->
+    <!-- This ensures no icon is visible on the splash screen -->
+</vector>
+

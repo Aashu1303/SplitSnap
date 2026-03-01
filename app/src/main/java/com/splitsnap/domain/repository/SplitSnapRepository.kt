@@ -1,4 +1,4 @@
-package com.splitsnap.data.repository
+package com.splitsnap.domain.repository
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -10,31 +10,74 @@ import com.splitsnap.data.local.entity.PersonEntity
 import com.splitsnap.data.local.entity.ReceiptEntity
 import com.splitsnap.data.local.entity.ReceiptItemEntity
 import com.splitsnap.data.local.entity.ReceiptParticipantEntity
-import com.splitsnap.domain.model.*
+import com.splitsnap.domain.model.AvatarColor
+import com.splitsnap.domain.model.Person
+import com.splitsnap.domain.model.PersonSplit
+import com.splitsnap.domain.model.Receipt
+import com.splitsnap.domain.model.ReceiptItem
+import com.splitsnap.domain.model.ReceiptStatus
+import com.splitsnap.domain.model.SplitItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
+import javax.inject.Inject
 
-class SplitSnapRepository(
+interface SplitSnapRepository {
+    suspend fun getAllReceipts(): Flow<List<Receipt>>
+    suspend fun getReceiptById(id: String): Receipt?
+    suspend fun createReceipt(storeName: String, date: String, total: Int): Receipt
+    suspend fun updateReceipt(receipt: Receipt)
+    suspend fun deleteReceipt(id: String)
+    fun getReceiptItems(receiptId: String): Flow<List<ReceiptItem>>
+    suspend fun getReceiptItemsSync(receiptId: String): List<ReceiptItem>
+    suspend fun createReceiptItem(
+        receiptId: String,
+        name: String,
+        quantity: Int,
+        price: Int
+    ): ReceiptItem
+
+    suspend fun updateReceiptItem(item: ReceiptItem)
+    suspend fun updateItemAssignments(itemId: String, assignments: Map<String, Int>)
+    suspend fun deleteReceiptItem(id: String)
+    fun getAllPeople(): Flow<List<Person>>
+    suspend fun getAllPeopleSync(): List<Person>
+    suspend fun getPersonById(id: String): Person?
+    suspend fun getMe(): Person?
+    suspend fun createPerson(
+        name: String,
+        relationship: String? = null,
+        avatarColor: AvatarColor = AvatarColor.random()
+    ): Person
+
+    suspend fun deletePerson(id: String)
+    fun getReceiptParticipants(receiptId: String): Flow<List<Person>>
+    suspend fun getReceiptParticipantsSync(receiptId: String): List<Person>
+    suspend fun addParticipant(receiptId: String, personId: String)
+    suspend fun removeParticipant(receiptId: String, personId: String)
+    suspend fun calculateSplits(receiptId: String): List<PersonSplit>
+}
+
+class SplitSnapRepositoryImpl @Inject constructor(
     private val receiptDao: ReceiptDao,
     private val receiptItemDao: ReceiptItemDao,
     private val personDao: PersonDao,
     private val receiptParticipantDao: ReceiptParticipantDao
-) {
+) : SplitSnapRepository {
     private val gson = Gson()
 
     // Receipt operations
-    fun getAllReceipts(): Flow<List<Receipt>> {
+    override suspend fun getAllReceipts(): Flow<List<Receipt>> {
         return receiptDao.getAllReceipts().map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    suspend fun getReceiptById(id: String): Receipt? {
+    override suspend fun getReceiptById(id: String): Receipt? {
         return receiptDao.getReceiptById(id)?.toDomain()
     }
 
-    suspend fun createReceipt(storeName: String, date: String, total: Int): Receipt {
+    override suspend fun createReceipt(storeName: String, date: String, total: Int): Receipt {
         val receipt = ReceiptEntity(
             id = UUID.randomUUID().toString(),
             storeName = storeName,
@@ -46,26 +89,26 @@ class SplitSnapRepository(
         return receipt.toDomain()
     }
 
-    suspend fun updateReceipt(receipt: Receipt) {
+    override suspend fun updateReceipt(receipt: Receipt) {
         receiptDao.updateReceipt(receipt.toEntity())
     }
 
-    suspend fun deleteReceipt(id: String) {
+    override suspend fun deleteReceipt(id: String) {
         receiptDao.deleteReceiptById(id)
     }
 
     // Receipt Item operations
-    fun getReceiptItems(receiptId: String): Flow<List<ReceiptItem>> {
+    override fun getReceiptItems(receiptId: String): Flow<List<ReceiptItem>> {
         return receiptItemDao.getItemsByReceiptId(receiptId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    suspend fun getReceiptItemsSync(receiptId: String): List<ReceiptItem> {
+    override suspend fun getReceiptItemsSync(receiptId: String): List<ReceiptItem> {
         return receiptItemDao.getItemsByReceiptIdSync(receiptId).map { it.toDomain() }
     }
 
-    suspend fun createReceiptItem(
+    override suspend fun createReceiptItem(
         receiptId: String,
         name: String,
         quantity: Int,
@@ -83,43 +126,43 @@ class SplitSnapRepository(
         return item.toDomain()
     }
 
-    suspend fun updateReceiptItem(item: ReceiptItem) {
+    override suspend fun updateReceiptItem(item: ReceiptItem) {
         receiptItemDao.updateItem(item.toEntity())
     }
 
-    suspend fun updateItemAssignments(itemId: String, assignments: Map<String, Int>) {
+    override suspend fun updateItemAssignments(itemId: String, assignments: Map<String, Int>) {
         val item = receiptItemDao.getItemById(itemId) ?: return
         val updatedItem = item.copy(assignments = gson.toJson(assignments))
         receiptItemDao.updateItem(updatedItem)
     }
 
-    suspend fun deleteReceiptItem(id: String) {
+    override suspend fun deleteReceiptItem(id: String) {
         receiptItemDao.deleteItemById(id)
     }
 
     // Person operations
-    fun getAllPeople(): Flow<List<Person>> {
+    override fun getAllPeople(): Flow<List<Person>> {
         return personDao.getAllPeople().map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    suspend fun getAllPeopleSync(): List<Person> {
+    override suspend fun getAllPeopleSync(): List<Person> {
         return personDao.getAllPeopleSync().map { it.toDomain() }
     }
 
-    suspend fun getPersonById(id: String): Person? {
+    override suspend fun getPersonById(id: String): Person? {
         return personDao.getPersonById(id)?.toDomain()
     }
 
-    suspend fun getMe(): Person? {
+    override suspend fun getMe(): Person? {
         return personDao.getMe()?.toDomain()
     }
 
-    suspend fun createPerson(
+    override suspend fun createPerson(
         name: String,
-        relationship: String? = null,
-        avatarColor: AvatarColor = AvatarColor.random()
+        relationship: String?,
+        avatarColor: AvatarColor
     ): Person {
         val initial = name.firstOrNull()?.uppercase() ?: "?"
         val person = PersonEntity(
@@ -134,22 +177,22 @@ class SplitSnapRepository(
         return person.toDomain()
     }
 
-    suspend fun deletePerson(id: String) {
+    override suspend fun deletePerson(id: String) {
         personDao.deletePersonById(id)
     }
 
     // Receipt Participant operations
-    fun getReceiptParticipants(receiptId: String): Flow<List<Person>> {
+    override fun getReceiptParticipants(receiptId: String): Flow<List<Person>> {
         return receiptParticipantDao.getPeopleByReceiptId(receiptId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    suspend fun getReceiptParticipantsSync(receiptId: String): List<Person> {
+    override suspend fun getReceiptParticipantsSync(receiptId: String): List<Person> {
         return receiptParticipantDao.getPeopleByReceiptIdSync(receiptId).map { it.toDomain() }
     }
 
-    suspend fun addParticipant(receiptId: String, personId: String) {
+    override suspend fun addParticipant(receiptId: String, personId: String) {
         val participant = ReceiptParticipantEntity(
             id = UUID.randomUUID().toString(),
             receiptId = receiptId,
@@ -158,12 +201,12 @@ class SplitSnapRepository(
         receiptParticipantDao.insertParticipant(participant)
     }
 
-    suspend fun removeParticipant(receiptId: String, personId: String) {
+    override suspend fun removeParticipant(receiptId: String, personId: String) {
         receiptParticipantDao.deleteByReceiptAndPerson(receiptId, personId)
     }
 
     // Calculate splits
-    suspend fun calculateSplits(receiptId: String): List<PersonSplit> {
+    override suspend fun calculateSplits(receiptId: String): List<PersonSplit> {
         val items = getReceiptItemsSync(receiptId)
         val participants = getReceiptParticipantsSync(receiptId)
 

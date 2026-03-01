@@ -1,4 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="app_name">SplitSnap</string>
+
+    <!-- Home -->
+    <string name="home_title">Split 💸 Snap</string>
+    <string name="home_subtitle">Split expenses with friends</string>
+    <string name="home_scan_receipt">Scan Receipt</string>
+    <string name="home_empty_title">No Receipts Yet</string>
+    <string name="home_empty_body">Scan your first receipt to start splitting expenses with friends</string>
+    <string name="home_recent_receipts">Recent Receipts</string>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_total">Total</string>
+    <string name="common_assign_to">Assign to:</string>
+    <string name="common_add">Add</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_view_details">View details</string>
+    <string name="common_view_split_summary">View Split Summary</string>
+    <string name="common_split_summary">Split Summary</string>
+    <string name="common_items_label">Items</string>
+    <string name="common_people_suffix">people</string>
+    <string name="common_item_singular">item</string>
+    <string name="common_item_plural">items</string>
+    <string name="common_selected_suffix">selected</string>
+
+    <!-- Camera -->
+    <string name="camera_title_scan_receipt">Scan Receipt</string>
+    <string name="camera_hint_position_receipt">Position receipt within frame</string>
+    <string name="camera_content_description_capture">Capture</string>
+    <string name="camera_state_capturing">Capturing...</string>
+    <string name="camera_state_processing_title">Processing Receipt</string>
+    <string name="camera_state_processing_body">Extracting items and prices...</string>
+
+    <!-- Edit Receipt -->
+    <string name="edit_receipt_default_title">Edit Receipt</string>
+    <string name="edit_receipt_splitting_with">Splitting with</string>
+    <string name="edit_receipt_create_new_person">Create New Person</string>
+    <string name="edit_receipt_selected_items_pattern">%1$d item%s selected</string>
+
+    <!-- Add Person Dialog -->
+    <string name="add_person_title">Add Person</string>
+    <string name="add_person_name_label">Name</string>
+    <string name="add_person_name_placeholder">Enter name</string>
+    <string name="add_person_relationship_label">Relationship (optional)</string>
+    <string name="add_person_relationship_placeholder">e.g., Friend, Roommate</string>
+    <string name="add_person_confirm">Add</string>
+
+    <!-- Split Summary -->
+    <string name="split_summary_title">Split Summary</string>
+    <string name="split_summary_edit_split">Edit Split</string>
+    <string name="split_summary_complete">Complete</string>
+    <string name="split_summary_individual_splits">Individual Splits</string>
+    <string name="split_summary_no_items_title">No items assigned yet</string>
+    <string name="split_summary_no_items_body">Go back and assign items to people</string>
+
+    <!-- Receipt Card -->
+    <string name="receipt_status_draft">Draft</string>
+    <string name="receipt_status_split">Split</string>
+    <string name="receipt_status_completed">Completed</string>
+
+    <!-- Item Card -->
+    <string name="item_card_quantity_prefix">Qty: </string>
+    <string name="item_card_each_suffix">each</string>
+    <string name="item_card_assigned_suffix">assigned</string>
+    <string name="item_card_expand">Expand</string>
+    <string name="item_card_collapse">Collapse</string>
+    <string name="item_card_decrease">Decrease</string>
+    <string name="item_card_increase">Increase</string>
+
+    <!-- Participant / Selection -->
+    <string name="participant_remove">Remove</string>
+
+    <!-- Camera error -->
+    <string name="camera_error_failed_to_process">Failed to process receipt</string>
 </resources>

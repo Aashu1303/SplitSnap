@@ -5,42 +5,66 @@ import android.graphics.Bitmap
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.splitsnap.camera.CameraManager
-import com.splitsnap.camera.ParsedReceipt
-import com.splitsnap.camera.ReceiptParser
-import com.splitsnap.data.repository.SplitSnapRepository
+import com.splitsnap.domain.api.ReceiptResult
 import com.splitsnap.domain.model.Receipt
+import com.splitsnap.domain.usecase.AddParticipantUseCase
+import com.splitsnap.domain.usecase.CreateReceiptItemUseCase
+import com.splitsnap.domain.usecase.CreateReceiptUseCase
+import com.splitsnap.domain.usecase.GetMeUseCase
+import com.splitsnap.domain.usecase.ProcessReceiptImageUseCase
+import com.splitsnap.domain.usecase.SaveParsedReceiptUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import javax.inject.Inject
 
 data class CameraUiState(
     val isCameraInitialized: Boolean = false,
     val isCapturing: Boolean = false,
     val isProcessing: Boolean = false,
     val capturedBitmap: Bitmap? = null,
-    val parsedReceipt: ParsedReceipt? = null,
     val createdReceiptId: String? = null,
     val error: String? = null,
     val processingStep: String = ""
 )
 
-class CameraViewModel(
-    private val repository: SplitSnapRepository
-) : ViewModel() {
+interface CameraViewModel {
+    val uiState: StateFlow<CameraUiState>
+    fun initializeCamera(
+        context: Context,
+        lifecycleOwner: LifecycleOwner,
+        previewView: PreviewView
+    )
 
-    private val _uiState = MutableStateFlow(CameraUiState())
-    val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
+    fun captureReceipt()
+    fun captureWithMockData()
+    fun retryCapture()
+    fun clearCreatedReceipt()
+}
+
+@HiltViewModel
+class CameraViewModelImpl @Inject constructor(
+    private val processReceiptImage: ProcessReceiptImageUseCase,
+    private val saveParsedReceipt: SaveParsedReceiptUseCase,
+    private val createReceipt: CreateReceiptUseCase,
+    private val createReceiptItem: CreateReceiptItemUseCase,
+    private val getMe: GetMeUseCase,
+    private val addParticipant: AddParticipantUseCase
+) : ViewModel(), CameraViewModel {
+
+    override val uiState = MutableStateFlow(CameraUiState())
 
     private var cameraManager: CameraManager? = null
-    private var receiptParser: ReceiptParser? = null
 
-    fun initializeCamera(
+    override fun initializeCamera(
         context: Context,
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView
@@ -48,131 +72,111 @@ class CameraViewModel(
         viewModelScope.launch {
             try {
                 cameraManager = CameraManager(context)
-                receiptParser = ReceiptParser()
-                
                 val success = cameraManager?.initializeCamera(lifecycleOwner, previewView) ?: false
-                
-                _uiState.value = _uiState.value.copy(
-                    isCameraInitialized = success,
-                    error = if (!success) "Failed to initialize camera" else null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isCameraInitialized = false,
-                    error = "Camera initialization failed: ${e.message}"
-                )
-            }
-        }
-    }
-
-    fun captureReceipt() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isCapturing = true,
-                processingStep = "Capturing image..."
-            )
-
-            try {
-                val bitmap = cameraManager?.captureImage()
-                
-                if (bitmap != null) {
-                    _uiState.value = _uiState.value.copy(
-                        isCapturing = false,
-                        isProcessing = true,
-                        capturedBitmap = bitmap,
-                        processingStep = "Analyzing receipt..."
-                    )
-
-                    val parsedReceipt = receiptParser?.parseReceipt(bitmap)
-                    
-                    _uiState.value = _uiState.value.copy(
-                        parsedReceipt = parsedReceipt,
-                        processingStep = "Extracting items..."
-                    )
-
-                    if (parsedReceipt != null) {
-                        val receipt = saveReceiptToDatabase(parsedReceipt)
-                        
-                        _uiState.value = _uiState.value.copy(
-                            isProcessing = false,
-                            createdReceiptId = receipt.id,
-                            processingStep = ""
-                        )
-                    } else {
-                        createMockReceiptFallback()
-                    }
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isCapturing = false,
-                        error = "Failed to capture image"
+                uiState.update {
+                    it.copy(
+                        isCameraInitialized = success,
+                        error = if (!success) "Failed to initialize camera" else null
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isCapturing = false,
-                    isProcessing = false,
-                    error = "Failed to process receipt: ${e.message}"
-                )
+                uiState.update {
+                    it.copy(
+                        isCameraInitialized = false,
+                        error = "Camera initialization failed: ${e.message}"
+                    )
+                }
             }
         }
     }
 
-    fun captureWithMockData() {
+    override fun captureReceipt() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isCapturing = true,
-                processingStep = "Capturing..."
-            )
-
-            kotlinx.coroutines.delay(1000)
-
-            _uiState.value = _uiState.value.copy(
-                isCapturing = false,
-                isProcessing = true,
-                processingStep = "Processing receipt..."
-            )
-
-            kotlinx.coroutines.delay(1500)
+            uiState.update { it.copy(isCapturing = true, processingStep = "Capturing image...") }
 
             try {
-                createMockReceiptFallback()
+                val bitmap = cameraManager?.captureImage()
+
+                if (bitmap != null) {
+                    uiState.update {
+                        it.copy(
+                            isCapturing = false,
+                            isProcessing = true,
+                            capturedBitmap = bitmap,
+                            processingStep = "Analyzing receipt..."
+                        )
+                    }
+
+                    uiState.update { it.copy(processingStep = "Extracting items...") }
+
+                    when (val result = processReceiptImage(bitmap)) {
+                        is ReceiptResult.Success -> {
+                            val receipt = saveParsedReceipt(result.receipt)
+                            uiState.update {
+                                it.copy(
+                                    isProcessing = false,
+                                    createdReceiptId = receipt.id,
+                                    processingStep = ""
+                                )
+                            }
+                        }
+
+                        is ReceiptResult.Error -> {
+                            uiState.update {
+                                it.copy(
+                                    isProcessing = false,
+                                    error = result.message,
+                                    processingStep = ""
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    uiState.update {
+                        it.copy(isCapturing = false, error = "Failed to capture image")
+                    }
+                }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    error = "Failed to create receipt"
-                )
+                uiState.update {
+                    it.copy(
+                        isCapturing = false,
+                        isProcessing = false,
+                        error = "Failed to process receipt: ${e.message}"
+                    )
+                }
             }
         }
     }
 
-    private suspend fun saveReceiptToDatabase(parsed: ParsedReceipt): Receipt {
-        val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-        val date = parsed.date ?: dateFormat.format(Date())
+    override fun captureWithMockData() {
+        viewModelScope.launch {
+            uiState.update { it.copy(isCapturing = true, processingStep = "Capturing...") }
+            delay(1000)
+            uiState.update {
+                it.copy(
+                    isCapturing = false,
+                    isProcessing = true,
+                    processingStep = "Processing receipt..."
+                )
+            }
+            delay(1500)
 
-        val receipt = repository.createReceipt(
-            storeName = parsed.storeName,
-            date = date,
-            total = parsed.total
-        )
-
-        parsed.items.forEach { item ->
-            repository.createReceiptItem(
-                receiptId = receipt.id,
-                name = item.name,
-                quantity = item.quantity,
-                price = item.price
-            )
+            try {
+                val receipt = createMockReceipt()
+                uiState.update {
+                    it.copy(
+                        isProcessing = false,
+                        createdReceiptId = receipt.id,
+                        processingStep = ""
+                    )
+                }
+            } catch (e: Exception) {
+                uiState.update { it.copy(isProcessing = false, error = "Failed to create receipt") }
+            }
         }
-
-        val me = repository.getMe()
-        if (me != null) {
-            repository.addParticipant(receipt.id, me.id)
-        }
-
-        return receipt
     }
 
-    private suspend fun createMockReceiptFallback() {
+    private suspend fun createMockReceipt(): Receipt {
         val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         val today = dateFormat.format(Date())
 
@@ -187,64 +191,30 @@ class CameraViewModel(
             Triple("Chicken Breast", 2, 899)
         )
 
-        val total = items.sumOf { it.second * it.third }
-
-        val receipt = repository.createReceipt(
-            storeName = "Trader Joe's",
-            date = today,
-            total = total
-        )
+        val receipt = createReceipt("Trader Joe's", today, items.sumOf { it.second * it.third })
 
         items.forEach { (name, qty, price) ->
-            repository.createReceiptItem(
-                receiptId = receipt.id,
-                name = name,
-                quantity = qty,
-                price = price
-            )
+            createReceiptItem(receipt.id, name, qty, price)
         }
 
-        val me = repository.getMe()
+        val me = getMe()
         if (me != null) {
-            repository.addParticipant(receipt.id, me.id)
+            addParticipant(receipt.id, me.id)
         }
 
-        _uiState.value = _uiState.value.copy(
-            isProcessing = false,
-            createdReceiptId = receipt.id,
-            processingStep = ""
-        )
+        return receipt
     }
 
-    fun retryCapture() {
-        _uiState.value = _uiState.value.copy(
-            capturedBitmap = null,
-            parsedReceipt = null,
-            error = null
-        )
+    override fun retryCapture() {
+        uiState.update { it.copy(capturedBitmap = null, error = null) }
     }
 
-    fun clearCreatedReceipt() {
-        _uiState.value = _uiState.value.copy(createdReceiptId = null)
-    }
-
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+    override fun clearCreatedReceipt() {
+        uiState.update { it.copy(createdReceiptId = null) }
     }
 
     override fun onCleared() {
         super.onCleared()
         cameraManager?.shutdown()
-        receiptParser?.close()
-    }
-
-    class Factory(private val repository: SplitSnapRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(CameraViewModel::class.java)) {
-                return CameraViewModel(repository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

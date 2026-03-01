@@ -5,29 +5,61 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.splitsnap.domain.model.PersonSplit
-import com.splitsnap.domain.model.ReceiptStatus
-import com.splitsnap.ui.components.Avatar
 import com.splitsnap.ui.components.AvatarLarge
 import com.splitsnap.ui.components.formatPrice
-import com.splitsnap.ui.theme.*
+import com.splitsnap.ui.theme.Primary
+import com.splitsnap.ui.theme.PrimaryDark
 import com.splitsnap.viewmodel.SplitSummaryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +69,7 @@ fun SplitSummaryScreen(
     onNavigateBack: () -> Unit,
     onNavigateHome: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.state.collectAsState()
     val receipt = uiState.receipt
 
     Scaffold(
@@ -45,7 +77,7 @@ fun SplitSummaryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Split Summary",
+                        text = stringResource(id = com.splitsnap.R.string.split_summary_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -54,7 +86,7 @@ fun SplitSummaryScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(id = com.splitsnap.R.string.common_back)
                         )
                     }
                 },
@@ -87,7 +119,7 @@ fun SplitSummaryScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Edit Split")
+                        Text(stringResource(id = com.splitsnap.R.string.split_summary_edit_split))
                     }
 
                     Button(
@@ -106,7 +138,7 @@ fun SplitSummaryScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Complete")
+                        Text(stringResource(id = com.splitsnap.R.string.split_summary_complete))
                     }
                 }
             }
@@ -178,7 +210,7 @@ fun SplitSummaryScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(
-                                    text = "Total",
+                                    text = stringResource(id = com.splitsnap.R.string.common_total),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
@@ -202,13 +234,13 @@ fun SplitSummaryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Individual Splits",
+                            text = stringResource(id = com.splitsnap.R.string.split_summary_individual_splits),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
 
                         Text(
-                            text = "${uiState.splits.size} people",
+                            text = "${uiState.splits.size} ${stringResource(id = com.splitsnap.R.string.common_people_suffix)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -241,7 +273,7 @@ fun SplitSummaryScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(
-                                    text = "No items assigned yet",
+                                    text = stringResource(id = com.splitsnap.R.string.split_summary_no_items_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -249,7 +281,7 @@ fun SplitSummaryScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    text = "Go back and assign items to people",
+                                    text = stringResource(id = com.splitsnap.R.string.split_summary_no_items_body),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center
@@ -337,7 +369,10 @@ private fun PersonSplitCard(
 
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    contentDescription = if (isExpanded)
+                        stringResource(id = com.splitsnap.R.string.item_card_collapse)
+                    else
+                        stringResource(id = com.splitsnap.R.string.item_card_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

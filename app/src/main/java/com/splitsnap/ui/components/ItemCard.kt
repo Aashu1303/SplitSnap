@@ -6,7 +6,17 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,13 +25,23 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.splitsnap.domain.model.Person
 import com.splitsnap.domain.model.ReceiptItem
@@ -51,7 +71,7 @@ fun ItemCard(
             containerColor = when {
                 isSelected -> PrimaryContainer
                 isFullyAssigned -> Color(0xFFF0FDF4)
-                else -> MaterialTheme.colorScheme.surface
+                else -> colorScheme.surface
             }
         ),
         border = if (isSelected) {
@@ -75,11 +95,11 @@ fun ItemCard(
                         .background(
                             if (isSelected) Primary
                             else if (isFullyAssigned) Success
-                            else MaterialTheme.colorScheme.surfaceVariant
+                            else colorScheme.surfaceVariant
                         )
                         .border(
                             width = if (!isSelected && !isFullyAssigned) 2.dp else 0.dp,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = colorScheme.outline,
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -100,9 +120,9 @@ fun ItemCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.name,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = colorScheme.onSurface
                     )
                     
                     Spacer(modifier = Modifier.height(2.dp))
@@ -111,14 +131,14 @@ fun ItemCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Qty: ${item.quantity}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = stringResource(id = com.splitsnap.R.string.item_card_quantity_prefix) + item.quantity,
+                            style = typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${formatPrice(item.price)} each",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "${formatPrice(item.price)} ${stringResource(id = com.splitsnap.R.string.item_card_each_suffix)}",
+                            style = typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -129,16 +149,16 @@ fun ItemCard(
                 ) {
                     Text(
                         text = formatPrice(item.totalPrice),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = Primary
                     )
                     
                     if (item.assignedQuantity > 0) {
                         Text(
-                            text = "${item.assignedQuantity}/${item.quantity} assigned",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isFullyAssigned) Success else MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "${item.assignedQuantity}/${item.quantity} ${stringResource(id = com.splitsnap.R.string.item_card_assigned_suffix)}",
+                            style = typography.labelSmall,
+                            color = if (isFullyAssigned) Success else colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -152,8 +172,11 @@ fun ItemCard(
                 ) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        contentDescription = if (isExpanded)
+                            stringResource(id = com.splitsnap.R.string.item_card_collapse)
+                        else
+                            stringResource(id = com.splitsnap.R.string.item_card_expand),
+                        tint = colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -167,7 +190,7 @@ fun ItemCard(
                 ) {
                     item.assignments.forEach { (personId, qty) ->
                         val person = participants.find { it.id == personId }
-                        if (person != null) {
+                        person?.let {
                             Box {
                                 AvatarSmall(person = person)
                                 if (qty > 1) {
@@ -181,7 +204,7 @@ fun ItemCard(
                                         Text(
                                             text = qty.toString(),
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = typography.labelSmall,
                                             color = Color.White
                                         )
                                     }
@@ -207,8 +230,8 @@ fun ItemCard(
                     
                     Text(
                         text = "Assign to:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = typography.labelMedium,
+                        color = colorScheme.onSurfaceVariant
                     )
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -252,14 +275,14 @@ private fun PersonAssignmentRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = person.name,
-                style = MaterialTheme.typography.bodyMedium,
+                style = typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             if (person.relationship != null) {
                 Text(
                     text = person.relationship,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -273,38 +296,39 @@ private fun PersonAssignmentRow(
                 onClick = { if (quantity > 0) onQuantityChange(quantity - 1) },
                 enabled = quantity > 0,
                 modifier = Modifier
-                    .size(32.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .size(24.dp)
+                    .background(colorScheme.surfaceVariant)
             ) {
                 Icon(
                     imageVector = Icons.Default.Remove,
-                    contentDescription = "Decrease",
+                    contentDescription = stringResource(id = com.splitsnap.R.string.item_card_decrease),
                     modifier = Modifier.size(16.dp)
                 )
             }
 
             Text(
                 text = quantity.toString(),
-                style = MaterialTheme.typography.titleMedium,
+                style = typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.width(24.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
             IconButton(
                 onClick = { if (quantity < maxQuantity) onQuantityChange(quantity + 1) },
                 enabled = quantity < maxQuantity,
                 modifier = Modifier
-                    .size(32.dp)
                     .clip(CircleShape)
+                    .size(24.dp)
                     .background(Primary)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Increase",
+                    contentDescription = stringResource(id = com.splitsnap.R.string.item_card_increase),
                     tint = Color.White,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier
+                        .size(16.dp)
                 )
             }
         }

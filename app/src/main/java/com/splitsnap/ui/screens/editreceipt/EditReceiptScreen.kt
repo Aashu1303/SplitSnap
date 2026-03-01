@@ -1,27 +1,62 @@
 package com.splitsnap.ui.screens.editreceipt
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.splitsnap.domain.model.Person
-import com.splitsnap.ui.components.*
-import com.splitsnap.ui.theme.*
+import com.splitsnap.ui.components.AddPersonDialog
+import com.splitsnap.ui.components.Avatar
+import com.splitsnap.ui.components.AvatarSmall
+import com.splitsnap.ui.components.ItemCard
+import com.splitsnap.ui.components.formatPrice
+import com.splitsnap.ui.theme.Primary
+import com.splitsnap.ui.theme.PrimaryContainer
 import com.splitsnap.viewmodel.EditReceiptViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,7 +66,7 @@ fun EditReceiptScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSummary: (String) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val receipt = uiState.receipt
 
     if (uiState.showAddPersonDialog) {
@@ -49,7 +84,8 @@ fun EditReceiptScreen(
                 title = {
                     Column {
                         Text(
-                            text = receipt?.storeName ?: "Edit Receipt",
+                            text = receipt?.storeName
+                                ?: stringResource(id = com.splitsnap.R.string.edit_receipt_default_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -66,7 +102,7 @@ fun EditReceiptScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(id = com.splitsnap.R.string.common_back)
                         )
                     }
                 },
@@ -131,7 +167,7 @@ fun EditReceiptScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Items",
+                        text = stringResource(id = com.splitsnap.R.string.common_items_label),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -180,7 +216,7 @@ private fun ParticipantsSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Splitting with",
+                text = stringResource(id = com.splitsnap.R.string.edit_receipt_splitting_with),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -194,7 +230,7 @@ private fun ParticipantsSection(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add")
+                    Text(stringResource(id = com.splitsnap.R.string.common_add))
                 }
 
                 DropdownMenu(
@@ -238,7 +274,10 @@ private fun ParticipantsSection(
                                     tint = Primary
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text("Create New Person", color = Primary)
+                                Text(
+                                    text = stringResource(id = com.splitsnap.R.string.edit_receipt_create_new_person),
+                                    color = Primary
+                                )
                             }
                         },
                         onClick = {
@@ -312,7 +351,7 @@ private fun ParticipantChip(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Remove",
+                        contentDescription = stringResource(id = com.splitsnap.R.string.participant_remove),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -343,20 +382,31 @@ private fun SelectionBottomBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "$selectedCount item${if (selectedCount > 1) "s" else ""} selected",
+                    text = buildString {
+                        append(selectedCount)
+                        append(" ")
+                        append(
+                            if (selectedCount > 1)
+                                stringResource(id = com.splitsnap.R.string.common_item_plural)
+                            else
+                                stringResource(id = com.splitsnap.R.string.common_item_singular)
+                        )
+                        append(" ")
+                        append(stringResource(id = com.splitsnap.R.string.common_selected_suffix))
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 
                 TextButton(onClick = onClearSelection) {
-                    Text("Clear")
+                    Text(stringResource(id = com.splitsnap.R.string.common_clear))
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Assign to:",
+                text = stringResource(id = com.splitsnap.R.string.common_assign_to),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -403,7 +453,7 @@ private fun BottomActionBar(
         ) {
             Column {
                 Text(
-                    text = "Total",
+                    text = stringResource(id = com.splitsnap.R.string.common_total),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -422,7 +472,7 @@ private fun BottomActionBar(
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
             ) {
                 Text(
-                    text = "View Split Summary",
+                    text = stringResource(id = com.splitsnap.R.string.common_view_split_summary),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
