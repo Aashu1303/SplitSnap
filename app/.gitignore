@@ -1,0 +1,17 @@
+# Build outputs
+/build/
+
+# Generated release artifacts
+*.apk
+*.aab
+
+# Signing configs
+*.keystore
+*.jks
+keystore.properties
+
+# Firebase
+google-services.json
+
+# Generated launcher icons (added by tooling)
+src/main/ic_launcher-playstore.png
