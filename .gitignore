@@ -21,7 +21,6 @@ google-services.json
 
 # Gradle
 .gradle/
-gradle/wrapper/gradle-wrapper.jar
 
 # NDK
 *.so
